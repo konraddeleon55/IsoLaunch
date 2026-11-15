@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="IsoLaunch.App/IsoLaunch.App.csproj" />
+  <Project Path="IsoLaunch.Core/IsoLaunch.Core.csproj" />
+  <Project Path="IsoLaunch.Tests/IsoLaunch.Tests.csproj" />
+</Solution>
