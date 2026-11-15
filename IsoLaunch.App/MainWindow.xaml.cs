@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
@@ -113,15 +110,19 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdateSandboxPreview()
+    private AppProfile CreatePreviewProfile()
     {
-        var previewProfile = new AppProfile
+        return new AppProfile
         {
             Id = _editingProfile.Id,
             ProfileName = ProfileNameBox.Text,
             SandboxRootOverride = _editingProfile.SandboxRootOverride
         };
-        SandboxPreviewBox.Text = InstanceLauncher.ResolveSandboxPaths(previewProfile).BaseDir;
+    }
+
+    private void UpdateSandboxPreview()
+    {
+        SandboxPreviewBox.Text = InstanceLauncher.ResolveSandboxPaths(CreatePreviewProfile()).BaseDir;
     }
 
     private bool TrySaveEditorToStore(out AppProfile savedProfile)
@@ -221,7 +222,7 @@ public partial class MainWindow : Window
     {
         var paths = InstanceLauncher.ResolveSandboxPaths(profile);
         InstanceLauncher.EnsureSandboxDirectories(paths);
-        Process.Start(new ProcessStartInfo
+        using var _ = Process.Start(new ProcessStartInfo
         {
             FileName = paths.BaseDir,
             UseShellExecute = true
@@ -312,18 +313,13 @@ public partial class MainWindow : Window
 
     private void OpenSelectedSandbox_Click(object sender, RoutedEventArgs e)
     {
-        var previewProfile = new AppProfile
-        {
-            Id = _editingProfile.Id,
-            ProfileName = ProfileNameBox.Text,
-            SandboxRootOverride = _editingProfile.SandboxRootOverride
-        };
-        OpenSandboxFolder(previewProfile);
+        OpenSandboxFolder(CreatePreviewProfile());
     }
 
     private void WipeSelectedSandbox_Click(object sender, RoutedEventArgs e)
     {
-        var paths = InstanceLauncher.ResolveSandboxPaths(_editingProfile);
+        var previewProfile = CreatePreviewProfile();
+        var paths = InstanceLauncher.ResolveSandboxPaths(previewProfile);
         var confirm = MessageBox.Show(
             this,
             $"Delete all isolated data in:\n{paths.BaseDir}\n\nThis cannot be undone.",
@@ -336,9 +332,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (InstanceLauncher.TryDeleteSandbox(_editingProfile, out var error))
+        if (InstanceLauncher.TryDeleteSandbox(previewProfile, out var error))
         {
-            SetStatus($"Wiped sandbox directory for \"{_editingProfile.ProfileName}\".");
+            SetStatus($"Wiped sandbox directory for \"{previewProfile.ProfileName}\".");
         }
         else
         {
@@ -403,8 +399,5 @@ public partial class MainWindow : Window
     }
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
-    {
-        Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-        e.Handled = true;
-    }
+        => App.OpenExternalUri(e);
 }

@@ -1,8 +1,5 @@
-using System;
-using System.IO;
 using IsoLaunch.Core.Models;
 using IsoLaunch.Core.Services;
-using Xunit;
 
 namespace IsoLaunch.Tests;
 
@@ -103,5 +100,26 @@ public sealed class InstanceLauncherTests
         Assert.False(result.Success);
         Assert.Null(result.ProcessId);
         Assert.Contains("Executable not found", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void BuildStartInfo_ExpandsEnvironmentVariablesInExecutablePath()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "IsoLaunchTests", Guid.NewGuid().ToString("N"));
+        var profile = new AppProfile
+        {
+            ProfileName = "EnvExe",
+            ExecutablePath = @"  %SystemRoot%\System32\notepad.exe  ",
+            IsolateProfilePaths = false,
+            PassUserDataDir = false,
+            PassNewWindowFlag = false,
+            BypassSharedKeyring = false
+        };
+
+        var startInfo = InstanceLauncher.BuildStartInfo(profile, tempRoot);
+        var expectedExe = Environment.ExpandEnvironmentVariables(@"%SystemRoot%\System32\notepad.exe");
+
+        Assert.Equal(expectedExe, startInfo.FileName);
+        Assert.Equal(Path.GetDirectoryName(expectedExe), startInfo.WorkingDirectory);
     }
 }

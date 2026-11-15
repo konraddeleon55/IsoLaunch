@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace IsoLaunch.Core.Models;
 
 /// <summary>

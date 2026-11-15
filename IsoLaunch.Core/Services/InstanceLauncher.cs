@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using IsoLaunch.Core.Models;
 
 namespace IsoLaunch.Core.Services;
@@ -70,6 +67,11 @@ public static class InstanceLauncher
         ArgumentNullException.ThrowIfNull(profile);
 
         var paths = ResolveSandboxPaths(profile, defaultRoot);
+        return BuildStartInfo(profile, paths);
+    }
+
+    private static ProcessStartInfo BuildStartInfo(AppProfile profile, SandboxPaths paths)
+    {
         var args = new List<string>();
 
         if (profile.PassUserDataDir)
@@ -87,15 +89,16 @@ public static class InstanceLauncher
             args.Add(profile.ExtraArguments.Trim());
         }
 
-        var workingDir = string.Empty;
-        if (!string.IsNullOrWhiteSpace(profile.ExecutablePath))
-        {
-            workingDir = Path.GetDirectoryName(profile.ExecutablePath) ?? string.Empty;
-        }
+        var executablePath = string.IsNullOrWhiteSpace(profile.ExecutablePath)
+            ? string.Empty
+            : Environment.ExpandEnvironmentVariables(profile.ExecutablePath.Trim());
+        var workingDir = string.IsNullOrEmpty(executablePath)
+            ? string.Empty
+            : Path.GetDirectoryName(executablePath) ?? string.Empty;
 
         var startInfo = new ProcessStartInfo
         {
-            FileName = profile.ExecutablePath,
+            FileName = executablePath,
             Arguments = string.Join(" ", args),
             WorkingDirectory = workingDir,
             UseShellExecute = false
@@ -113,11 +116,14 @@ public static class InstanceLauncher
             startInfo.Environment["SSH_CONNECTION"] = DefaultSshConnectionValue;
         }
 
-        foreach (var kvp in profile.CustomEnvironmentVariables)
+        if (profile.CustomEnvironmentVariables is not null)
         {
-            if (!string.IsNullOrWhiteSpace(kvp.Key))
+            foreach (var kvp in profile.CustomEnvironmentVariables)
             {
-                startInfo.Environment[kvp.Key.Trim()] = kvp.Value ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(kvp.Key))
+                {
+                    startInfo.Environment[kvp.Key.Trim()] = kvp.Value ?? string.Empty;
+                }
             }
         }
 
@@ -145,23 +151,7 @@ public static class InstanceLauncher
         {
             EnsureSandboxDirectories(paths);
 
-            var profileToLaunch = new AppProfile
-            {
-                Id = profile.Id,
-                ProfileName = profile.ProfileName,
-                AppName = profile.AppName,
-                Preset = profile.Preset,
-                ExecutablePath = expandedExe,
-                ExtraArguments = profile.ExtraArguments,
-                IsolateProfilePaths = profile.IsolateProfilePaths,
-                PassUserDataDir = profile.PassUserDataDir,
-                PassNewWindowFlag = profile.PassNewWindowFlag,
-                BypassSharedKeyring = profile.BypassSharedKeyring,
-                CustomEnvironmentVariables = profile.CustomEnvironmentVariables,
-                SandboxRootOverride = profile.SandboxRootOverride
-            };
-
-            var startInfo = BuildStartInfo(profileToLaunch, defaultRoot);
+            var startInfo = BuildStartInfo(profile, paths);
             using var process = Process.Start(startInfo);
             if (process is null)
             {
