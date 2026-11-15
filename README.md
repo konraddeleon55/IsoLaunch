@@ -59,7 +59,7 @@ When you launch a profile, IsoLaunch creates an isolated sandbox directory (by d
 
 ```powershell
 # Clone the repository
-git clone https://github.com/<your-username>/IsoLaunch.git
+git clone https://github.com/konraddeleon55/IsoLaunch.git
 cd IsoLaunch
 
 # Run unit tests
@@ -79,13 +79,13 @@ The repository includes an [Inno Setup](https://jrsoftware.org/isinfo.php) scrip
    ```powershell
    winget install JRSoftware.InnoSetup
    ```
-2. Build the installer:
+2. Build the installer (auto-increments the patch version in `Directory.Build.props`):
    ```powershell
    .\scripts\build-installer.ps1
    ```
-   The generated installer will be placed in `dist\IsoLaunch-Setup-1.0.0-win-x64.exe`.
+   The generated installer will be placed in `dist\IsoLaunch-Setup-<version>-win-x64.exe`.
 
-   *(Optional)* Pass `-Version "1.2.0"` to set a custom version, or `-FrameworkDependent` to build a smaller installer that relies on an existing .NET 10 Desktop Runtime.
+   *(Optional)* Pass `-Bump minor` / `-Bump major` / `-Bump none`, `-Version "1.2.0"` to set a custom version, or `-FrameworkDependent` to build a smaller installer that relies on an existing .NET 10 Desktop Runtime.
 
 ---
 

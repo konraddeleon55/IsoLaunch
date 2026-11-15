@@ -29,6 +29,7 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+SetupIconFile=..\IsoLaunch.App\Assets\app.ico
 UninstallDisplayIcon={app}\IsoLaunch.App.exe
 
 [Languages]

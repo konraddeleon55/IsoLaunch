@@ -1,15 +1,44 @@
 param(
-    [string]$Version = "1.0.0",
+    [string]$Version,
+    [ValidateSet("patch", "minor", "major", "none")]
+    [string]$Bump = "patch",
     [switch]$FrameworkDependent
 )
 
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+$PropsPath = Join-Path $RepoRoot "Directory.Build.props"
 $ProjectPath = Join-Path $RepoRoot "IsoLaunch.App\IsoLaunch.App.csproj"
 $PublishDir = Join-Path $RepoRoot "artifacts\publish\win-x64"
 $OutputDir = Join-Path $RepoRoot "dist"
 $IssPath = Join-Path $RepoRoot "installer\IsoLaunch.iss"
+
+[xml]$propsXml = Get-Content -Path $PropsPath -Raw
+$versionNode = $propsXml.SelectSingleNode("/Project/PropertyGroup/Version")
+if (-not $versionNode) {
+    throw "Could not find <Version> in $PropsPath"
+}
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $current = [version]$versionNode.InnerText.Trim()
+    $major = $current.Major
+    $minor = $current.Minor
+    $patch = if ($current.Build -ge 0) { $current.Build } else { 0 }
+
+    switch ($Bump) {
+        "major" { $major++; $minor = 0; $patch = 0 }
+        "minor" { $minor++; $patch = 0 }
+        "patch" { $patch++ }
+        "none"  { }
+    }
+
+    $Version = "$major.$minor.$patch"
+}
+
+$versionNode.InnerText = $Version
+$propsXml.Save($PropsPath)
+Write-Host "Version set to $Version in Directory.Build.props" -ForegroundColor Yellow
 
 Write-Host "Publishing IsoLaunch.App ($Version)..." -ForegroundColor Cyan
 if (Test-Path $PublishDir) {
@@ -20,6 +49,7 @@ $publishArgs = @(
     "publish", $ProjectPath,
     "-c", "Release",
     "-r", "win-x64",
+    "-p:Version=$Version",
     "-o", $PublishDir
 )
 
@@ -54,4 +84,4 @@ if ($LASTEXITCODE -ne 0) {
     throw "ISCC failed with exit code $LASTEXITCODE"
 }
 
-Write-Host "Installer created in: $OutputDir" -ForegroundColor Green
+Write-Host "Installer created in: $OutputDir (v$Version)" -ForegroundColor Green
